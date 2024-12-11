@@ -46,7 +46,17 @@ class Perceptron(LinearModel):
         y_i (scalar): the gold label for that example
         other arguments are ignored
         """
-        raise NotImplementedError # Q1.1 (a)
+
+        scores = np.dot(self.W, x_i.T)  # (n_classes x n_examples)
+        y_pred = scores.argmax(axis=0)  # (n_examples)
+        if y_pred != y_i:
+            self.W[y_i] += x_i
+            self.W[y_pred] -= x_i
+
+        #    self.W[y_i,:] = self.W[y_i,:] + x_i
+        #    self.W[y_pred,:] = self.W[y_pred,:] - x_i
+
+        #raise NotImplementedError # Q1.1 (a)
 
 
 class LogisticRegression(LinearModel):
@@ -137,7 +147,7 @@ def main():
 
     utils.configure_seed(seed=42)
 
-    add_bias = opt.model != "mlp"
+    add_bias = opt.model != "mlp" # if model is different from mlp
     data = utils.load_dataset(data_path=opt.data_path, bias=add_bias)
     train_X, train_y = data["train"]
     dev_X, dev_y = data["dev"]
@@ -173,7 +183,7 @@ def main():
             loss = model.train_epoch(
                 train_X,
                 train_y,
-                learning_rate=opt.learning_rate
+                learning_rate =opt.learning_rate
             )
         else:
             model.train_epoch(
