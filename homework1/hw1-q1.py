@@ -50,12 +50,8 @@ class Perceptron(LinearModel):
         scores = np.dot(self.W, x_i.T)  # (n_classes x n_examples)
         y_pred = scores.argmax(axis=0)  # (n_examples)
         if y_pred != y_i:
-            self.W[y_i] += x_i
-            self.W[y_pred] -= x_i
-
-        #    self.W[y_i,:] = self.W[y_i,:] + x_i
-        #    self.W[y_pred,:] = self.W[y_pred,:] - x_i
-
+            self.W[y_i,:] = self.W[y_i,:] + x_i
+            self.W[y_pred,:] = self.W[y_pred,:] - x_i
         #raise NotImplementedError # Q1.1 (a)
 
 
@@ -66,8 +62,24 @@ class LogisticRegression(LinearModel):
         y_i: the gold label for that example
         learning_rate (float): keep it at the default value for your plots
         """
-        raise NotImplementedError # Q1.2 (a,b)
-
+        if l2_penalty == 0:
+            #scores = np.dot(self.W, x_i.T)
+            scores = np.expand_dims(self.W.dot(x_i), axis = 1)
+            p_scores = np.exp(scores)/sum(np.exp(scores)) # softmax 
+            e_y = np.zeros((np.size(self.W, 0),1))
+            e_y[y_i] = 1
+            grad = (p_scores - e_y).dot(np.expand_dims(x_i, axis = 1).T)
+            #stochastic grad descent:
+            self.W = self.W - learning_rate*grad
+        else:
+            scores = np.expand_dims(self.W.dot(x_i), axis = 1)
+            p_scores = np.exp(scores)/sum(np.exp(scores)) # softmax 
+            e_y = np.zeros((np.size(self.W, 0),1))
+            e_y[y_i] = 1
+            grad = (p_scores - e_y).dot(np.expand_dims(x_i, axis = 1).T)
+            #stochastic grad descent:
+            self.W = (1- learning_rate   * l2_penalty) * self.W - learning_rate*grad
+        #raise NotImplementedError # Q1.2 (a,b)
 
 class MLP(object):
     def __init__(self, n_classes, n_features, hidden_size):
