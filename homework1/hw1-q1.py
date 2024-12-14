@@ -77,14 +77,48 @@ class LogisticRegression(LinearModel):
         #raise NotImplementedError # Q1.2 (a,b)
 
 class MLP(object):
+    # 100 hidden units K
+    # 48 * 48 features
+
+    # feed-forward neural network
+    # input layer --> hidden layer --> output layer
+
+    # relu activation function  g(z) = relu(z) = max 0z
+    # cross entropy
+
+    # 20 epochs + stochastic gradient descent learning rate 0.001 
+    #  python hw1-q1.py mlp
     def __init__(self, n_classes, n_features, hidden_size):
         # Initialize an MLP with a single hidden layer.
-        raise NotImplementedError # Q1.3 (a)
+        self.W1 = np.random.normal(0,0.01, (hidden_size, n_features))
+        self.b1 = np.zeros((hidden_size,1))
+
+        self.W2 = np.random.normal(0,0.01, (n_classes, hidden_size))
+        self.b2 = np.zeros((n_classes,1))
+        # gradient backpropagation train
+
+        #raise NotImplementedError # Q1.3 (a)
 
     def predict(self, X):
+        # Hidden layer pre-activation: z(x)=W(1)x + b(1)
+        # Hidden layer activation: h(x)=g(z(x)) component-wise
+        z1 = 
+        z=0
+        relu = max(0,z)
+
+        # Output layer activation: f(x) =o(h(x)Tw(2)+b(2)) -- change multiple output units (6) -> P(y=c|x) + softmax
+        # w(2) IR hiddenx1
+        
+        
         # Compute the forward pass of the network. At prediction time, there is
         # no need to save the values of hidden nodes.
 
+
+        def relu_activation (z):
+            return np.maximum(0,z)
+        
+        exp_z = np.exp (vector)
+        softmax = exp_z / np.sum(exp_z, axis=1, keepdims = True)
         raise NotImplementedError # Q1.3 (a)
 
     def evaluate(self, X, y):
@@ -102,8 +136,24 @@ class MLP(object):
         """
         Dont forget to return the loss of the epoch.
         """
+        z_1 = X @ self.W1.T + self.b1
+        #self.W1 * X + self.b1
+        h_1 = np.maximum (0,z_1)
+        z_2 =  h_1 @ self.W2.T + self.b2
+        #self.W2 * h_1 + self.b2
+        y_pred = softmax(z_2)
 
+        epsilon=1e-6
+        loss = -np.mean(np.sum(y_true * np.log (y_pred + 1e-9), axis=1))
+        
+        self.W1 -= lr? * dW1
+        self.b1 -= lr? * db1
+        self.W2 -= lr? * dW2
+        self.b3 -= lr? * db2
         return loss
+    
+        #y_true = true label (one hot encoded)
+        #y_pred = predicted probability for class k
         #raise NotImplementedError # Q1.3 (a)
 
 
