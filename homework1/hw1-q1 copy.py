@@ -74,20 +74,29 @@ class LogisticRegression(LinearModel):
         else:
             #stochastic grad descent:
             self.W = (1- learning_rate   * l2_penalty) * self.W - learning_rate*grad
-        # Q1.2 (a,b)
+        #raise NotImplementedError # Q1.2 (a,b)
 
 def relu_activation (z):
         return np.maximum(0,z)
 
 def softmax(vector):
+    # 0 ou 1
+    #exp_z = np.exp(Z2 - np.max(Z2, axis=1, keepdims = True))
+    #softmax = exp_z / (np.sum(exp_z, axis=1, keepdims = True)+1e-6)
+
     softmax = []
     for z in vector:
-        exp_z = np.exp(z - np.max(z))  
-        sm = exp_z / (sum(exp_z) )  
+        exp_z = np.exp(z - np.max(z))  # Subtrair o máximo
+        sm = exp_z / (sum(exp_z) )  # Divisão com epsilon + 1e-15
+        #print(sm)
         softmax += [sm]
     return softmax
 
 def cross_entropy(pred, true):
+    #loss = np.log(y_pred[yi])
+    #loss = -e_y.dot(np.log(y_pred + epsilon))
+    #loss = -np.mean(np.sum(e_y * np.log (y_pred + 1e-9), axis=1))
+    #np.log(np.dot(pred, true.T))
     return -np.sum(true*np.log(pred))
 
 class MLP(object):
@@ -103,30 +112,42 @@ class MLP(object):
         self.W2 = np.random.normal(mu,sigma, (n_classes, hidden_size))
         self.b2 = np.zeros((n_classes,1))
 
+        #self.b1 = np.zeros((hidden_size,))
+        #self.b2 = np.zeros((n_classes,))
         # gradient backpropagation train
 
-        # Q1.3 (a)
+        #raise NotImplementedError # Q1.3 (a)
     
     def predict(self, X):        
         # Compute the forward pass of the network. At prediction time, there is
         # no need to save the values of hidden nodes.
+        print("X no predict", X.shape)
+
+        #Z1 = np.dot(self.W1, X.T) + self.b1[:, np.newaxis] # hidden x samples
         Z1 = np.dot(self.W1, X.T) + self.b1 # hidden x samples
 
         print("Z1",Z1.shape)
         H = np.maximum(0,Z1)
         print("H",H.shape)
-        Z2 = np.dot(self.W2, H) + self.b2 # classes x samples
-        O = softmax(Z2.T)
 
+        #H = np.maximum(0,Z1)
+        #Z2 = np.dot(self.W2, H) + self.b2[:, np.newaxis] # classes x samples
+        Z2 = np.dot(self.W2, H) + self.b2 # classes x samples
+        print("Z2",Z2.shape)
+
+        O = softmax(Z2.T)
+        #print("softmax", softmax.shape)
+        #print(softmax)
         # Hidden layer pre-activation: z(x)=W(1)x + b(1)
         # Hidden layer activation: h(x)=g(z(x)) component-wise
         # Output layer activation: f(x) =o(h(x)Tw(2)+b(2)) -- change multiple output units (6) -> P(y=c|x) + softmax
-
+        
+        #predictions = np.argmax(O, axis=1)
         predictions = np.argmax(O, axis=1)
         print("predictions", predictions.shape)
 
         return predictions
-        # Q1.3 (a)
+        #raise NotImplementedError # Q1.3 (a)
 
     def evaluate(self, X, y):
         """
@@ -135,6 +156,9 @@ class MLP(object):
         """
         # Identical to LinearModel.evaluate()
         y_hat = self.predict(X)
+        #print("y_hat",y_hat.shape)
+        
+        #print("y",y.shape)
         n_correct = (y == y_hat).sum()
         n_possible = y.shape[0]
         return n_correct / n_possible
@@ -144,24 +168,51 @@ class MLP(object):
         Dont forget to return the loss of the epoch.
         """
         total_loss = 0
+        print("x", X.shape)
         for xi, yi in zip(X,y):
             e_y = np.zeros((np.size(self.W2, 0),1))
             e_y[yi] = 1
+            #print("xi", xi.shape)
 
             # forward-pass
+            #self.W1 * X + self.b1
+            #print("W1", self.W1.shape)
+            #print("b1",self.b1.shape)
             aaaa = np.dot(self.W1, np.expand_dims(xi, axis = 1))
             z_1 = aaaa + self.b1
+            #print(aaaa.shape)
+            ##print("z1", z_1.shape)
+
+            #z_1 = np.dot(self.W1, np.expand_dims(xi, axis=1))+self.b1[:, np.newaxis]
+            #np.expand_dims(xi, axis = 1)) + self.b1
+
+            #z_1 = xi @ self.W1.T + self.b1
             h_1 = np.maximum (0,z_1)
+
+            #self.W2 * h_1 + self.b2
+            #z_2 = np.dot(self.W2, h_1) + self.b2[:, np.newaxis]
             z_2 = np.dot(self.W2, h_1) + self.b2
+            #print("z2", z_2.shape)
+
+            # 1*6
+
+            #z_2 =  h_1 @ self.W2.T + self.b2
+            '''exp_z = np.exp(z_2 - np.max(z_2, axis = 1, keepdims = True))
+            softmax = exp_z / np.sum(exp_z, axis=1, keepdims = True)
+            '''
+            #pred_probs = softmax([z2])[0]   
+            #print("softmax", softmax.shape)
             y_pred = softmax ([z_2])[0]
-            epsilon=1e-9
+            #print("y_pred 6l", y_pred.shape)
+
+            #print("softmax ok",np.sum(y_pred))
+            epsilon=1e-6
 
             #compute the loss
-            y_pred = np.clip(y_pred, epsilon, 1 - epsilon)  # Stability trick
+            # 1x6 6x1
+            #print(e_y, y_pred)
+            y_pred = np.clip(y_pred, 1e-9, 1 - 1e-9)  # Stability trick
             loss = cross_entropy (y_pred, e_y) # ou yi
-            #y_true = true label (one hot encoded)
-            #y_pred = predicted probability for class k
-
             total_loss += loss
             #print("loss", total_loss)
             #backpropagation
@@ -188,7 +239,9 @@ class MLP(object):
 
         return total_loss
     
-        # Q1.3 (a)
+        #y_true = true label (one hot encoded)
+        #y_pred = predicted probability for class k
+        #raise NotImplementedError # Q1.3 (a)
 
 
 def plot(epochs, train_accs, val_accs, filename=None):

@@ -26,7 +26,9 @@ class LogisticRegression(nn.Module):
         pytorch to make weights and biases, have a look at
         https://pytorch.org/docs/stable/nn.html
         """
-        super().__init__()
+        super(LogisticRegression, self).__init__()
+        self.linear = nn.Linear(n_features, n_classes)
+        self.activation = nn.Sigmoid()
         # In a pytorch module, the declarations of layers needs to come after
         # the super __init__ line, otherwise the magic doesn't work.
 
@@ -44,7 +46,9 @@ class LogisticRegression(nn.Module):
         forward pass -- this is enough for it to figure out how to do the
         backward pass.
         """
-        raise NotImplementedError
+        y_pred = self.activation(self.linear(x))
+        return y_pred
+        #raise NotImplementedError
 
 
 class FeedforwardNetwork(nn.Module):
@@ -63,9 +67,31 @@ class FeedforwardNetwork(nn.Module):
         attributes that each FeedforwardNetwork instance has. Note that nn
         includes modules for several activation functions and dropout as well.
         """
-        super().__init__()
-        # Implement me!
-        raise NotImplementedError
+        super(FeedforwardNetwork, self).__init__()
+        self.layers = nn.ModuleList()
+        
+        # input
+        self.layers.append(nn.Linear(n_features, hidden_size)) #, bias=False, device=None, dtype=None)
+        
+        # hidden layers
+        for l in range(layers-1):
+            self.layers.append(nn.Linear(hidden_size, hidden_size))
+        self.layers.append(nn.Linear(hidden_size, n_classes))
+
+        print(activation_type)
+        self.activation_type = activation_type.lower().strip()
+        self.dropout = nn.Dropout(dropout)
+
+        if self.activation_type == 'relu':
+            print("It's RELU")
+            self.activation = nn.ReLU()
+        elif self.activation_type == 'tanh':
+            print("It's tanh")
+
+            self.activation = nn.Tanh()
+        else:
+            raise ValueError(f"Unsupported activation function: {activation_type}")
+        #        raise NotImplementedError
 
     def forward(self, x, **kwargs):
         """
@@ -75,7 +101,14 @@ class FeedforwardNetwork(nn.Module):
         the output logits from x. This will include using various hidden
         layers, pointwise nonlinear functions, and dropout.
         """
-        raise NotImplementedError
+        for layer in range(len(self.layers)-1):
+            x= self.layers[layer](x)
+            x = self.activation(x)
+            x=self.dropout(x)
+
+        x=self.layers[-1](x)
+        return x
+        #raise NotImplementedError
 
 
 def train_batch(X, y, model, optimizer, criterion, **kwargs):
@@ -96,7 +129,23 @@ def train_batch(X, y, model, optimizer, criterion, **kwargs):
     This function should return the loss (tip: call loss.item()) to get the
     loss as a numerical value that is not part of the computation graph.
     """
-    raise NotImplementedError
+
+    # prediction of outputs for X
+    #   clear the gradients
+    optimizer.zero_grad()
+    #   compute the model output
+    yhat = model(X)
+
+    # loss computation
+    loss = criterion(yhat, y)
+    #   credit assignment
+    loss.backward()
+    #   update model weights
+    optimizer.step()
+
+    return loss
+
+    #raise NotImplementedError
 
 
 def predict(model, X):

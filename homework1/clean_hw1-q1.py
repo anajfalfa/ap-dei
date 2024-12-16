@@ -74,7 +74,7 @@ class LogisticRegression(LinearModel):
         else:
             #stochastic grad descent:
             self.W = (1- learning_rate   * l2_penalty) * self.W - learning_rate*grad
-        # Q1.2 (a,b)
+        #raise NotImplementedError # Q1.2 (a,b)
 
 def relu_activation (z):
         return np.maximum(0,z)
@@ -82,8 +82,8 @@ def relu_activation (z):
 def softmax(vector):
     softmax = []
     for z in vector:
-        exp_z = np.exp(z - np.max(z))  
-        sm = exp_z / (sum(exp_z) )  
+        exp_z = np.exp(z - np.max(z))  # Subtrair o máximo
+        sm = exp_z / (sum(exp_z) )  # Divisão com epsilon + 1e-15
         softmax += [sm]
     return softmax
 
@@ -102,31 +102,29 @@ class MLP(object):
 
         self.W2 = np.random.normal(mu,sigma, (n_classes, hidden_size))
         self.b2 = np.zeros((n_classes,1))
-
         # gradient backpropagation train
 
-        # Q1.3 (a)
+        #raise NotImplementedError # Q1.3 (a)
     
     def predict(self, X):        
         # Compute the forward pass of the network. At prediction time, there is
         # no need to save the values of hidden nodes.
+
         Z1 = np.dot(self.W1, X.T) + self.b1 # hidden x samples
-
-        print("Z1",Z1.shape)
         H = np.maximum(0,Z1)
-        print("H",H.shape)
         Z2 = np.dot(self.W2, H) + self.b2 # classes x samples
-        O = softmax(Z2.T)
 
+        O = softmax(Z2.T)
+        #print("softmax", softmax.shape)
+        #print(softmax)
         # Hidden layer pre-activation: z(x)=W(1)x + b(1)
         # Hidden layer activation: h(x)=g(z(x)) component-wise
         # Output layer activation: f(x) =o(h(x)Tw(2)+b(2)) -- change multiple output units (6) -> P(y=c|x) + softmax
-
+        
         predictions = np.argmax(O, axis=1)
-        print("predictions", predictions.shape)
 
         return predictions
-        # Q1.3 (a)
+        #raise NotImplementedError # Q1.3 (a)
 
     def evaluate(self, X, y):
         """
@@ -135,6 +133,7 @@ class MLP(object):
         """
         # Identical to LinearModel.evaluate()
         y_hat = self.predict(X)
+
         n_correct = (y == y_hat).sum()
         n_possible = y.shape[0]
         return n_correct / n_possible
@@ -144,6 +143,7 @@ class MLP(object):
         Dont forget to return the loss of the epoch.
         """
         total_loss = 0
+        print("x", X.shape)
         for xi, yi in zip(X,y):
             e_y = np.zeros((np.size(self.W2, 0),1))
             e_y[yi] = 1
@@ -151,23 +151,22 @@ class MLP(object):
             # forward-pass
             aaaa = np.dot(self.W1, np.expand_dims(xi, axis = 1))
             z_1 = aaaa + self.b1
+
             h_1 = np.maximum (0,z_1)
+
             z_2 = np.dot(self.W2, h_1) + self.b2
+
             y_pred = softmax ([z_2])[0]
             epsilon=1e-9
 
             #compute the loss
-            y_pred = np.clip(y_pred, epsilon, 1 - epsilon)  # Stability trick
+            y_pred = np.clip(y_pred, epsilon, 1 -epsilon )  # Stability trick
             loss = cross_entropy (y_pred, e_y) # ou yi
-            #y_true = true label (one hot encoded)
-            #y_pred = predicted probability for class k
-
             total_loss += loss
-            #print("loss", total_loss)
+
             #backpropagation
             grad_o = y_pred - e_y #gradient of the loss function at output (output error)
 
-            #w2_grad = grad_o[:, None].dot(h[:, None].T)
             w2_grad = np.dot(grad_o, h_1.T)
             b2_grad = grad_o
 
@@ -183,12 +182,11 @@ class MLP(object):
             self.b1 -= learning_rate * b1_grad
             self.W2 -= learning_rate * w2_grad
             self.b2 -= learning_rate * b2_grad
-
-        #total_loss = total_loss / X.shape(0)
-
         return total_loss
     
-        # Q1.3 (a)
+        #y_true = true label (one hot encoded)
+        #y_pred = predicted probability for class k
+        #raise NotImplementedError # Q1.3 (a)
 
 
 def plot(epochs, train_accs, val_accs, filename=None):
