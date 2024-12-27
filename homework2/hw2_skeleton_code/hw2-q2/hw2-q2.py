@@ -12,6 +12,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 
 import utils
+import time
 
 
 class ConvBlock(nn.Module):
@@ -32,21 +33,25 @@ class ConvBlock(nn.Module):
         self.convolution_layer = nn.Conv2d(
             in_channels,    # in_channels = in_channels
             out_channels,   # out_channels=out_channels
-            kernel_size = kernel_size, # kernel_size = kernel_size
+            kernel_size = kernel_size, 
             stride=1,
-            padding=padding)      # padding = padding
+            padding=padding)      
+        
         self.activation_func = nn.ReLU()
         if maxpool:
             self.pooling_layer = nn.MaxPool2d (kernel_size=2, stride=2)
         else:
             self.pooling_layer = None
-        self.dropout_layer = nn.Dropout2d(p = dropout) #p=0.1 (p=0 default)
 
-        # Q2.2 Initialize batchnorm layer 
-        '''if batch_norm:
-            self.batch_layer = nn.BatchNorm2d() 
+        self.dropout_layer = nn.Dropout(p = dropout) #p=0.1 (p=0 default) # nn.Dropout CONVBLOCK INSTRUCTOR
+
+        # Q2.2 Initialize batchnorm layer pip install torch
+
+        self.batch_norm = batch_norm
+        if batch_norm:
+            self.batch_layer = nn.BatchNorm2d(out_channels) 
         else:
-            self.batch_layer = None'''
+            self.batch_layer = nn.Identity()
         #raise NotImplementedError
 
     def forward(self, x):
@@ -55,8 +60,7 @@ class ConvBlock(nn.Module):
         # Implement execution of layers in right order
         x = self.convolution_layer(x)
 
-        '''if self.batch_layer:
-            x = self.batch_layer(x) # Confirmar'''
+        x = self.batch_layer(x) # identity if disable batch normalization
 
         x = self.activation_func(x)
         
@@ -85,39 +89,32 @@ class CNN(nn.Module):
             ConvBlock(in_channels=channels[1], out_channels=channels[2], maxpool=maxpool, batch_norm=batch_norm, dropout=dropout_prob),
             ConvBlock(in_channels=channels[2], out_channels=channels[3], maxpool=maxpool, batch_norm=batch_norm, dropout=dropout_prob),
         )
+        #print("size convblocks", self.convblocks.shape)
         # -- sequence of 3 conv blocks -- output channel sizes 32 64 128
 
-        self.flatten = nn.Flatten()
+        if self.batch_norm:
+            self.global_avg_pool = nn.AdaptiveAvgPool2d((1,1))
+            #print("size global avg pool", self.global_avg_pool.)
+
+        else:
+            self.flatten = nn.Flatten()
+            #print("size flatten", self.flatten.shape)
+
         # nr_input_features = nr_output_channels x output_width x output_height
 
         # Initialize layers for the MLP block
         self.mlp = nn.Sequential(
-            nn.Linear(in_features=channels[3]*(48//(2**3))*(48//(2**3)), out_features=fc1_out_dim),
+            nn.Linear(in_features=channels[3], out_features=fc1_out_dim), # *(48//(2**3))*(48//(2**3))
             nn.ReLU(),
+            # For Q2.2 initalize batch normalization
+            #             nn.BatchNorm1d(fc1_out_dim) if batch_norm else nn.Identity(),
+            nn.BatchNorm1d(fc1_out_dim) if batch_norm else nn.Identity(),
             nn.Dropout(p=dropout_prob),
             nn.Linear(in_features= fc1_out_dim , out_features=fc2_out_dim),
             nn.ReLU(),
             nn.Linear(in_features=fc2_out_dim, out_features=6)
         )
-        '''self.afftransf1 = nn.Linear(out_features=fc1_out_dim) 
-        self.activation = nn.ReLU() #?
-        self.afftransf2 = nn.Linear(out_features=fc2_out_dim)
-        self.dropout = nn.Dropout(p=dropout_prob) #?
-        
-        self.afftransf3 = nn.Linear(in_features=fc2_out_dim, out_features=classes)'''
-
-        '''
-        relu
-        dropout dropout_prob=0.1         self.dropout_layer = nn.Dropout2d(p=0.1)
-        affine transf fc2_out_dim
-        relu
-        affine transf nr_classes output Log-Softmax layer
-        '''
-
-        # For Q2.2 initalize batch normalization
-        '''if batch_norm:
-            self.batch = nn.BatchNorm2d() # rever'''
-        
+        #print("size MLP", self.mlp.shape)
 
     def forward(self, x):
         x = x.reshape(x.shape[0], 3, 48, -1)
@@ -128,40 +125,22 @@ class CNN(nn.Module):
         #or
         x = self.convblocks(x)
 
-        # Flattent output of the last conv block
-        x = self.flatten(x)
-        #print("x shape", x.shape)
-
-        # Implement MLP part
-        x = self.mlp(x)
-        # using flattened vector as input
-        '''x = self.afftransf1(x)
-        # between batch normalization
-        x = self.activation(x)
-        x = self.dropout(x)
-        x = self.afftransf2(x)
-        # between batch normalization
-
-        x = self.activation(x)
-        x = self.afftransf3(x)'''
-
-        ''' # affine transformation 1024 output features
-            # rectified linear unit activation function 
-            # dropout layer with a dropout 
-
-            # affine transformation 512 output features
-            # relu activation
-            # affine transformation nr_classes followed by an output Log-Softmax Layer
         '''
-
+        #print("x shape", x.shape)
+        # using flattened vector as input'''
+        
         # For Q2.2 implement global averag pooling
-        '''nn.AdaptiveAvgPool2d (kernel=(1,1))
-        # alternative: average output from last conv block over height and width 
+        if self.batch_norm:
+            x = self.global_avg_pool(x)
+            x = torch.flatten (x,1)#??
+            #print("global avg e flatten",x.shape)
+        else:
+            # Flattent output of the last conv block
+            x = self.flatten(x)
+            #print("flatten simple",x.shape)
+            
 
-        #nn.BatchNorm1d in MLP block
-        nn.Identity
-        #return x'''
-
+        x = self.mlp(x)
         return F.log_softmax(x, dim=1)
  
 
@@ -216,7 +195,12 @@ def plot(epochs, plottable, ylabel='', name=''):
 
 
 def get_number_trainable_params(model):
-    raise NotImplementedError
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+    '''model.parameters() -> all the parameters (weights and biases)
+    p.requires_grad: parameters that are trainable (i.e., those whose gradients will be updated during backpropagation)
+    p.numel(): total number of elements in the tensor. 
+    '''
+    #raise NotImplementedError
 
 
 def plot_file_name_sufix(opt, exlude):
@@ -244,33 +228,37 @@ def main():
     parser.add_argument('-no_maxpool', action='store_true')
     parser.add_argument('-no_batch_norm', action='store_true')
     parser.add_argument('-data_path', type=str, default='../intel_landscapes.npz',)
-    parser.add_argument('-device', choices=['cpu', 'cuda', 'mps'], default='cpu')
+    parser.add_argument('-device', choices=['cpu', 'cuda', 'mps', 'dml'], default='cpu')
 
     opt = parser.parse_args()
 
     # Setting seed for reproducibility
     utils.configure_seed(seed=42)
 
+    if opt.device == "dml":
+        import torch_directml
+        device = torch_directml.device()
+    else:
+        device = torch.device(opt.device)
     # Load data
     data = utils.load_dataset(data_path=opt.data_path)
     dataset = utils.ClassificationDataset(data)
     train_dataloader = DataLoader(
         dataset, batch_size=opt.batch_size, shuffle=True)
-    dev_X, dev_y = dataset.dev_X.to(opt.device), dataset.dev_y.to(opt.device)
-    test_X, test_y = dataset.test_X.to(opt.device), dataset.test_y.to(opt.device)
+    '''dev_X, dev_y = dataset.dev_X.to(opt.device), dataset.dev_y.to(opt.device)
+    test_X, test_y = dataset.test_X.to(opt.device), dataset.test_y.to(opt.device)'''
+    dev_X, dev_y = dataset.dev_X.to(device), dataset.dev_y.to(device)
+    test_X, test_y = dataset.test_X.to(device), dataset.test_y.to(device)
 
     # initialize the model
     model = CNN(
         opt.dropout,
         maxpool=not opt.no_maxpool,
         batch_norm=not opt.no_batch_norm
-    ).to(opt.device)
+    ).to(device)
 
-    '''
-# Definindo o dispositivo (CPU)
-device = torch.device("cpu")  # Define que o modelo será executado no CPU
-model = model.to(device)      # Move o modelo para o CPU
-    '''
+    print(f"Usando o dispositivo: {device}")
+
     # get an optimizer
     optims = {"adam": torch.optim.Adam, "sgd": torch.optim.SGD}
 
@@ -287,12 +275,16 @@ model = model.to(device)      # Move o modelo para o CPU
     train_mean_losses = []
     valid_accs = []
     train_losses = []
+    start = time.time()
+
     for ii in epochs:
         print('\nTraining epoch {}'.format(ii))
         model.train()
         for X_batch, y_batch in train_dataloader:
-            X_batch = X_batch.to(opt.device)
-            y_batch = y_batch.to(opt.device)
+            X_batch = X_batch.to(device)
+            y_batch = y_batch.to(device)
+            '''X_batch = X_batch.to(opt.device)
+            y_batch = y_batch.to(opt.device)'''
             loss = train_batch(
                 X_batch, y_batch, model, optimizer, criterion)
             train_losses.append(loss)
@@ -306,6 +298,11 @@ model = model.to(device)      # Move o modelo para o CPU
         print("Valid loss: %.4f" % val_loss)
         print('Valid acc: %.4f' % val_acc)
 
+    elapsed_time = time.time() - start
+    minutes = int(elapsed_time // 60)
+    seconds = int(elapsed_time % 60)
+    print('Training took {} minutes and {} seconds'.format(minutes, seconds))
+
     test_acc, _ = evaluate(model, test_X, test_y, criterion)
     test_acc_perc = test_acc * 100
     test_acc_str = '%.2f' % test_acc_perc
@@ -316,7 +313,7 @@ model = model.to(device)      # Move o modelo para o CPU
     plot(epochs, train_mean_losses, ylabel='Loss', name='CNN-3-train-loss-{}-{}'.format(sufix, test_acc_str))
     plot(epochs, valid_accs, ylabel='Accuracy', name='CNN-3-valid-accuracy-{}-{}'.format(sufix, test_acc_str))
 
-    print('Number of trainable parameters: ', get_number_trainable_params(model))
+    #print('Number of trainable parameters: ', get_number_trainable_params(model))
 
 if __name__ == '__main__':
     main()
