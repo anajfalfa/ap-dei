@@ -19,30 +19,58 @@ class ConvBlock(nn.Module):
             self,
             in_channels,
             out_channels,
-            kernel_size,
-            padding=None,
+            kernel_size = 3, #kernel_size, 
+            padding=1, # None, #padding = 1, 
             maxpool=True,
             batch_norm=True,
-            dropout=0.0
+            dropout=0.1 #0.1 # 0.0
         ):
         super().__init__()
-
+        #super(ConvBlock, self).__init__()
+        
         # Q2.1. Initialize convolution, maxpool, activation and dropout layers 
-        
-        
+        self.convolution_layer = nn.Conv2d(
+            in_channels,    # in_channels = in_channels
+            out_channels,   # out_channels=out_channels
+            kernel_size = kernel_size, # kernel_size = kernel_size
+            stride=1,
+            padding=padding)      # padding = padding
+        self.activation_func = nn.ReLU()
+        if maxpool:
+            self.pooling_layer = nn.MaxPool2d (kernel_size=2, stride=2)
+        else:
+            self.pooling_layer = None
+        self.dropout_layer = nn.Dropout2d(p = dropout) #p=0.1 (p=0 default)
+
         # Q2.2 Initialize batchnorm layer 
-        
-        raise NotImplementedError
+        '''if batch_norm:
+            self.batch_layer = nn.BatchNorm2d() 
+        else:
+            self.batch_layer = None'''
+        #raise NotImplementedError
 
     def forward(self, x):
         # input for convolution is [b, c, w, h]
         
         # Implement execution of layers in right order
+        x = self.convolution_layer(x)
 
-        raise NotImplementedError
+        '''if self.batch_layer:
+            x = self.batch_layer(x) # Confirmar'''
+
+        x = self.activation_func(x)
+        
+        if self.pooling_layer:
+            x = self.pooling_layer(x)
+        
+        x = self.dropout_layer(x)
+
+        return x
+        #raise NotImplementedError
 
 
 class CNN(nn.Module):
+
     def __init__(self, dropout_prob, maxpool=True, batch_norm=True, conv_bias=True):
         super(CNN, self).__init__()
         channels = [3, 32, 64, 128]
@@ -52,22 +80,87 @@ class CNN(nn.Module):
         self.batch_norm = batch_norm
 
         # Initialize convolutional blocks
-        
+        self.convblocks = nn.Sequential(
+            ConvBlock(in_channels=channels[0], out_channels=channels[1], maxpool=maxpool, batch_norm=batch_norm, dropout=dropout_prob),
+            ConvBlock(in_channels=channels[1], out_channels=channels[2], maxpool=maxpool, batch_norm=batch_norm, dropout=dropout_prob),
+            ConvBlock(in_channels=channels[2], out_channels=channels[3], maxpool=maxpool, batch_norm=batch_norm, dropout=dropout_prob),
+        )
+        # -- sequence of 3 conv blocks -- output channel sizes 32 64 128
+
+        self.flatten = nn.Flatten()
+        # nr_input_features = nr_output_channels x output_width x output_height
+
         # Initialize layers for the MLP block
+        self.mlp = nn.Sequential(
+            nn.Linear(in_features=channels[3]*(48//(2**3))*(48//(2**3)), out_features=fc1_out_dim),
+            nn.ReLU(),
+            nn.Dropout(p=dropout_prob),
+            nn.Linear(in_features= fc1_out_dim , out_features=fc2_out_dim),
+            nn.ReLU(),
+            nn.Linear(in_features=fc2_out_dim, out_features=6)
+        )
+        '''self.afftransf1 = nn.Linear(out_features=fc1_out_dim) 
+        self.activation = nn.ReLU() #?
+        self.afftransf2 = nn.Linear(out_features=fc2_out_dim)
+        self.dropout = nn.Dropout(p=dropout_prob) #?
+        
+        self.afftransf3 = nn.Linear(in_features=fc2_out_dim, out_features=classes)'''
+
+        '''
+        relu
+        dropout dropout_prob=0.1         self.dropout_layer = nn.Dropout2d(p=0.1)
+        affine transf fc2_out_dim
+        relu
+        affine transf nr_classes output Log-Softmax layer
+        '''
+
         # For Q2.2 initalize batch normalization
+        '''if batch_norm:
+            self.batch = nn.BatchNorm2d() # rever'''
         
 
     def forward(self, x):
         x = x.reshape(x.shape[0], 3, 48, -1)
 
         # Implement execution of convolutional blocks 
-        
+        #for layer in range(len(self.convblocks)):
+        #    x= self.convblocks[layer](x)
+        #or
+        x = self.convblocks(x)
+
         # Flattent output of the last conv block
-        
+        x = self.flatten(x)
+        #print("x shape", x.shape)
+
         # Implement MLP part
-        
+        x = self.mlp(x)
+        # using flattened vector as input
+        '''x = self.afftransf1(x)
+        # between batch normalization
+        x = self.activation(x)
+        x = self.dropout(x)
+        x = self.afftransf2(x)
+        # between batch normalization
+
+        x = self.activation(x)
+        x = self.afftransf3(x)'''
+
+        ''' # affine transformation 1024 output features
+            # rectified linear unit activation function 
+            # dropout layer with a dropout 
+
+            # affine transformation 512 output features
+            # relu activation
+            # affine transformation nr_classes followed by an output Log-Softmax Layer
+        '''
+
         # For Q2.2 implement global averag pooling
-        
+        '''nn.AdaptiveAvgPool2d (kernel=(1,1))
+        # alternative: average output from last conv block over height and width 
+
+        #nn.BatchNorm1d in MLP block
+        nn.Identity
+        #return x'''
 
         return F.log_softmax(x, dim=1)
  
@@ -150,7 +243,7 @@ def main():
                         choices=['sgd', 'adam'], default='sgd')
     parser.add_argument('-no_maxpool', action='store_true')
     parser.add_argument('-no_batch_norm', action='store_true')
-    parser.add_argument('-data_path', type=str, default='intel_landscapes.v2.npz',)
+    parser.add_argument('-data_path', type=str, default='../intel_landscapes.npz',)
     parser.add_argument('-device', choices=['cpu', 'cuda', 'mps'], default='cpu')
 
     opt = parser.parse_args()
@@ -173,6 +266,11 @@ def main():
         batch_norm=not opt.no_batch_norm
     ).to(opt.device)
 
+    '''
+# Definindo o dispositivo (CPU)
+device = torch.device("cpu")  # Define que o modelo será executado no CPU
+model = model.to(device)      # Move o modelo para o CPU
+    '''
     # get an optimizer
     optims = {"adam": torch.optim.Adam, "sgd": torch.optim.SGD}
 
