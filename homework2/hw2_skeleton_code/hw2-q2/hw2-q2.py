@@ -104,10 +104,9 @@ class CNN(nn.Module):
 
         # Initialize layers for the MLP block
         self.mlp = nn.Sequential(
-            nn.Linear(in_features=channels[3], out_features=fc1_out_dim), # *(48//(2**3))*(48//(2**3))
+            nn.Linear(in_features=channels[3]*(48//(2**3))*(48//(2**3)), out_features=fc1_out_dim) if not batch_norm else nn.Linear(in_features=channels[3], out_features=fc1_out_dim), 
             nn.ReLU(),
             # For Q2.2 initalize batch normalization
-            #             nn.BatchNorm1d(fc1_out_dim) if batch_norm else nn.Identity(),
             nn.BatchNorm1d(fc1_out_dim) if batch_norm else nn.Identity(),
             nn.Dropout(p=dropout_prob),
             nn.Linear(in_features= fc1_out_dim , out_features=fc2_out_dim),
@@ -130,6 +129,7 @@ class CNN(nn.Module):
         # using flattened vector as input'''
         
         # For Q2.2 implement global averag pooling
+        print(self.batch_norm)
         if self.batch_norm:
             x = self.global_avg_pool(x)
             x = torch.flatten (x,1)#??
