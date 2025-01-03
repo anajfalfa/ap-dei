@@ -20,22 +20,35 @@ class BahdanauAttention(nn.Module):
 
     def __init__(self, hidden_size):
         super(BahdanauAttention, self).__init__()
-        self.Ws = nn.Linear(hidden_size, hidden_size, bias=False)
-        self.Wh = nn.Linear(hidden_size, hidden_size, bias=False)
-        self.v = nn.Linear(hidden_size, 1, bias=False)
+        self.Ws = nn.Linear(hidden_size, hidden_size)
+        self.Wh = nn.Linear(hidden_size, hidden_size)
+        self.v = nn.Linear(hidden_size, 1)
+        self.mlp = nn.Sequential(
+            nn.Linear(hidden_size * 2, hidden_size),
+            nn.Tanh()
+        )
         
         ###raise NotImplementedError("Add your implementation.")
 
     def forward(self, query, encoder_outputs, src_lengths):
-        """
-        query:          (batch_size, max_tgt_len, hidden_size) - output do decoder #todas as palavras decoded
-        encoder_outputs:(batch_size, max_src_len, hidden_size) - output do encodr #todas as palavras encoded
-        src_lengths:    (batch_size) 
-        Returns:
-            attn_out:   (batch_size, max_tgt_len, hidden_size) - attended vector
-        """
-        
+        query = query.unsqueeze(2)  # (batch_size, max_tgt_len, hidden_size)
+        encoder_outputs = encoder_outputs.unsqueeze(1)  # (batch_size, 1, max_src_len, hidden_size)
 
+        # Compute attention scores
+        scores = self.v(torch.tanh(self.Ws(query) + self.Wh(encoder_outputs))).squeeze(-1)  # (batch_size, max_tgt_len, max_src_len)
+
+        # Mask padding positions
+        attn_mask = self.sequence_mask(src_lengths).unsqueeze(1)  # (batch_size, 1, max_src_len)
+        scores = scores.masked_fill(attn_mask == 0, float('-inf'))
+
+        alignment = torch.softmax(scores, dim=2)  # (batch_size, max_tgt_len, max_src_len)
+
+        # Context computation
+        context = torch.bmm(alignment, encoder_outputs.squeeze(1))  # (batch_size, max_tgt_len, hidden_size)
+
+        attn_out = self.mlp(torch.cat([context, query.squeeze(2)], dim=-1))  # (batch_size, max_tgt_len, hidden_size)
+
+        return attn_out, alignment
         ###raise NotImplementedError("Add your implementation.")
 
     def sequence_mask(self, lengths):
