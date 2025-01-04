@@ -199,7 +199,7 @@ class Decoder(nn.Module):
             output_tgt_token = self.dropout(output_tgt_token)
 
             if self.attn is not None:
-                output_tgt_token = self.attn(output_tgt_token, encoder_outputs, src_lengths)
+                output_tgt_token, _ = self.attn(output_tgt_token, encoder_outputs, src_lengths)
 
             lstm_outs.append(output_tgt_token)
 
