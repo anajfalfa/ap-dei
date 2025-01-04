@@ -196,11 +196,13 @@ class Decoder(nn.Module):
             embedded_tgt_token = embedded_tgt_token.unsqueeze(1)    # (batch_size, 1, hidden_size)
 
             output_tgt_token, dec_state = self.lstm(embedded_tgt_token, dec_state)
-            output_tgt_token = self.dropout(output_tgt_token)
+            
 
             if self.attn is not None:
                 output_tgt_token, _ = self.attn(output_tgt_token, encoder_outputs, src_lengths)
 
+            output_tgt_token = self.dropout(output_tgt_token)
+            
             lstm_outs.append(output_tgt_token)
 
         outputs = torch.cat(lstm_outs, dim=1)
