@@ -20,14 +20,13 @@ class ConvBlock(nn.Module):
             self,
             in_channels,
             out_channels,
-            kernel_size = 3, #kernel_size, 
-            padding=1, # None, #padding = 1, 
+            kernel_size = 3, 
+            padding=1, 
             maxpool=True,
             batch_norm=True,
             dropout=0.1 #0.1 # 0.0
         ):
         super().__init__()
-        #super(ConvBlock, self).__init__()
         
         # Q2.1. Initialize convolution, maxpool, activation and dropout layers 
         self.convolution_layer = nn.Conv2d(
@@ -43,7 +42,7 @@ class ConvBlock(nn.Module):
         else:
             self.pooling_layer = None
 
-        self.dropout_layer = nn.Dropout(p = dropout) #p=0.1 (p=0 default) # nn.Dropout CONVBLOCK INSTRUCTOR
+        self.dropout_layer = nn.Dropout(p = dropout) #p=0.1 
 
         # Q2.2 Initialize batchnorm layer pip install torch
 
@@ -52,7 +51,6 @@ class ConvBlock(nn.Module):
             self.batch_layer = nn.BatchNorm2d(out_channels) 
         else:
             self.batch_layer = nn.Identity()
-        #raise NotImplementedError
 
     def forward(self, x):
         # input for convolution is [b, c, w, h]
@@ -70,8 +68,6 @@ class ConvBlock(nn.Module):
         x = self.dropout_layer(x)
 
         return x
-        #raise NotImplementedError
-
 
 class CNN(nn.Module):
 
@@ -89,17 +85,12 @@ class CNN(nn.Module):
             ConvBlock(in_channels=channels[1], out_channels=channels[2], maxpool=maxpool, batch_norm=batch_norm, dropout=dropout_prob),
             ConvBlock(in_channels=channels[2], out_channels=channels[3], maxpool=maxpool, batch_norm=batch_norm, dropout=dropout_prob),
         )
-        #print("size convblocks", self.convblocks.shape)
         # -- sequence of 3 conv blocks -- output channel sizes 32 64 128
 
         if self.batch_norm:
             self.global_avg_pool = nn.AdaptiveAvgPool2d((1,1))
-            #print("size global avg pool", self.global_avg_pool.)
-
         else:
             self.flatten = nn.Flatten()
-            #print("size flatten", self.flatten.shape)
-
         # nr_input_features = nr_output_channels x output_width x output_height
 
         # Initialize layers for the MLP block
@@ -113,32 +104,20 @@ class CNN(nn.Module):
             nn.ReLU(),
             nn.Linear(in_features=fc2_out_dim, out_features=6)
         )
-        #print("size MLP", self.mlp.shape)
 
     def forward(self, x):
         x = x.reshape(x.shape[0], 3, 48, -1)
 
         # Implement execution of convolutional blocks 
-        #for layer in range(len(self.convblocks)):
-        #    x= self.convblocks[layer](x)
-        #or
         x = self.convblocks(x)
-
-        '''
-        #print("x shape", x.shape)
-        # using flattened vector as input'''
         
         # For Q2.2 implement global averag pooling
-        print(self.batch_norm)
         if self.batch_norm:
             x = self.global_avg_pool(x)
             x = torch.flatten (x,1)#??
-            #print("global avg e flatten",x.shape)
         else:
             # Flattent output of the last conv block
-            x = self.flatten(x)
-            #print("flatten simple",x.shape)
-            
+            x = self.flatten(x)            
 
         x = self.mlp(x)
         return F.log_softmax(x, dim=1)
@@ -200,7 +179,6 @@ def get_number_trainable_params(model):
     p.requires_grad: parameters that are trainable (i.e., those whose gradients will be updated during backpropagation)
     p.numel(): total number of elements in the tensor. 
     '''
-    #raise NotImplementedError
 
 
 def plot_file_name_sufix(opt, exlude):
@@ -313,7 +291,7 @@ def main():
     plot(epochs, train_mean_losses, ylabel='Loss', name='CNN-3-train-loss-{}-{}'.format(sufix, test_acc_str))
     plot(epochs, valid_accs, ylabel='Accuracy', name='CNN-3-valid-accuracy-{}-{}'.format(sufix, test_acc_str))
 
-    #print('Number of trainable parameters: ', get_number_trainable_params(model))
+    print('Number of trainable parameters: ', get_number_trainable_params(model))
 
 if __name__ == '__main__':
     main()

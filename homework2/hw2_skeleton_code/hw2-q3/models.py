@@ -208,14 +208,13 @@ class Decoder(nn.Module):
         outputs = torch.cat(lstm_outs, dim=1)
 
         return outputs, dec_state
+    
         #############################################
         # END OF YOUR CODE
         #############################################
         # outputs: (batch_size, max_tgt_len, hidden_size)
         # dec_state: tuple with 2 tensors
         # each tensor is (num_layers, batch_size, hidden_size)
-        ###raise NotImplementedError("Add your implementation.")
-
 
 class Seq2Seq(nn.Module):
     def __init__(

@@ -1,3 +1,26 @@
+
+There is a explanation about why small kernels are used in the convolution layers instead of kernel ($width \times  height$).
+Small Kernels are a good tool to detect (small) local features in the image - fine-grained details.
+Each kernel specializes in identifying a specific feature. 
+The more kernels you have, the more complex features your convolutional layer can detect. 
+It is easier to train because fewer parameters are involved, making the model less prone to overfitting.
+
+
+The pooling layers are used to reduce the spatial dimensions of the feature maps in order to reduce computational complexity, prevent overfitting by summarizing the information and focus on the most important features - lower the number of computations required in subsequent layers.
+The kernel size in pooling determines how much information is condensed:
+
+Small Pooling Kernels (e.g., 2x2) preserve more spatial details, which results in less aggressive dimensionality reduction. They are useful when you want to preserve more information about the image.
+
+
+In contrast, large Pooling Kernels (e.g., 4x4) aggressively reduce the size of the feature maps, remove more details but focus on the global patterns. They are useful for high-resolution images where fine details are less important.
+
+
+Using smaller kernels may require more layers to achieve the same receptive field as a single large kernel, increasing the model's depth.
+The large kernels reduce the required depth but increase the number of parameters in each layer, making the model more computationally intensive 
+
+
+Smaller kernels tend to perform better for tasks requiring fine-grained detail (e.g., face recognition).
+Larger kernels are better for tasks that rely on understanding global patterns (e.g., background segmentation).
 import argparse
 import random
 from functools import partial
@@ -69,6 +92,7 @@ def train(data, model, lr, n_epochs, checkpoint_name, max_len=50):
 
             optimizer.zero_grad()
             outputs, _ = model(src, src_lengths, tgt[:, :-1])
+
             loss = criterion(
                 outputs.reshape(-1, outputs.shape[-1]), tgt[:, 1:].reshape(-1)
             )
